@@ -1,0 +1,478 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Homework 3: Basic Entanglement"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notes regarding the imports: Aer is a backend simulator for the IBM quantum computers (other backends are run on real QC). Numpy is good with arrays and matrices. pyplot is for visualization of probability distributions.\n",
+    "Note that some of these imports will be required throughout this assignment, so you have to run this cell first."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import qiskit\n",
+    "from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, execute, Aer, assemble\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "\n",
+    "print('qiskit vers.= %s'%qiskit.__version__)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Settings and backends.\n",
+    "shots = 1024\n",
+    "simulator = Aer.get_backend('qasm_simulator')\n",
+    "state_vector_sim = Aer.get_backend('statevector_simulator')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "## 1. Demo: Entanglement\n",
+    "\n",
+    "First, we will demonstrate __quantum superposition__. This will be accomplished using a one-qubit quantum circuit that has a single gate: the __Hadamard operation__, $\\mathbf{H}$. The qubit is initialized to the computational __basis vector__ $|0\\rangle$ and is then applied to the Hadamard gate.  Whenever the resulting __state vector__ for the evolved wavefunction is examined, it is observed that the __probability amplitudes__ for both $|0\\rangle$ and $|1\\rangle$ are equal to $\\frac{1}{\\sqrt{2}}$, indicating __maximal superposition__ of the qubit. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "qr = QuantumRegister(2, 'q_reg')\n",
+    "cr = ClassicalRegister(2, 'c_reg')\n",
+    "qc = QuantumCircuit(qr, cr)\n",
+    "qc.h(qr[0])\n",
+    "qc.cx(qr[0],qr[1])\n",
+    "\n",
+    "state_vector = execute(qc,state_vector_sim).result()\n",
+    "vector = state_vector.get_statevector(qc)\n",
+    "print('\\nSTATEVECTOR: ', vector)\n",
+    "\n",
+    "qc.measure(qr, cr)\n",
+    "\n",
+    "print('\\nQUANTUM CIRCUIT DIAGRAM:')\n",
+    "print(qc.draw())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can see the opensource QASM assembly code specification of the circuit."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print('\\nQASM SPECIFICATION:')\n",
+    "for i in qc.qasm():\n",
+    "    print(i,end='')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print('\\nSIMULATION RESULTS:')\n",
+    "for i in range(0,3):\n",
+    "    job = execute(qc,simulator,shots=shots)\n",
+    "    result = job.result()\n",
+    "    counts = result.get_counts(qc)\n",
+    "    print('Simulation distribution %d:'%i, counts)\n",
+    "    plt.bar(counts.keys(),counts.values())\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Take note how quantum registers are both initialized to $|0\\rangle$. Therefore, the input to the Bell State Generator is $|00\\rangle$. When we simulate the Bell State Generator, we will get an output quantum state that is entangled. This particular output state is the Bell State $|\\Phi^+\\rangle=\\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}$. For more information about Bell states, see: https://en.wikipedia.org/wiki/Bell_state"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### 1.1 __Question 1__: Create a bell state generator that results in entangled states `|01> and |10>`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## Insert your code in this cell; this should generate the entangled state.  Your code should also create histograms to verify the output."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 2. Run Entanglement Generator on a Real Quantum Computer\n",
+    "\n",
+    "To use this notebook, you must copy your API token from the \"My Account\" page on the IBM Q Experience.  (You should already have an account that you created for Homework 2, but if you do not, please see https://github.com/Qiskit/qiskit-ibmq-provider.)\n",
+    "\n",
+    "More information about the tokens is available in the instructions document for this homework.  Also, be aware that the\n",
+    "commented out \"IBMProvider.save_account(token, overwrite=True)\" should be uncommented the first time you run this code since your token will be\n",
+    "saved to your local disk drive.  You can comment out this line afterward, since your token will have already been saved."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit_ibm_provider import IBMProvider, least_busy\n",
+    "from qiskit.tools.monitor import job_monitor\n",
+    "\n",
+    "# Paste your token from the IBM Q here:\n",
+    "token = \"\"\n",
+    "\n",
+    "# The following statement 'save.account' only needs to be run once, since your token will be saved to disk.\n",
+    "#IBMProvider.save_account(token, overwrite=True)\n",
+    "try:\n",
+    "    provider = IBMProvider()\n",
+    "    backend = provider.get_backend('ibmq_qasm_simulator')\n",
+    "    \n",
+    "except:\n",
+    "    print(\n",
+    "        \"\"\"WARNING: No valid IBMQ credentials found on disk.\n",
+    "             You must store your credentials using IBMQ.save_account(token, url).\n",
+    "             For now, there's only access to local simulator backends...\"\"\"\n",
+    "    )\n",
+    "    exit(0)\n",
+    "    pass\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This shows the types of IBM backend cloud devices. Note that each backend has a specific qubit architecture."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# See a list of available backends.\n",
+    "ibmq_backends = provider.backends()\n",
+    "print(\"Remote backends: \", ibmq_backends)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We will select the least busy backend with at least 2 qubits"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Allocate the least busy device with at least 2 qubits.\n",
+    "try:\n",
+    "    least_busy_device = least_busy(\n",
+    "        provider.backends(filters=lambda x: x.configuration().n_qubits >= 2, simulator=False)\n",
+    "    )\n",
+    "except:\n",
+    "    print(\"All devices are currently unavailable.\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Output selected device based on least queue/load.\n",
+    "print(\"Running on current least busy device: \", least_busy_device)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### __Question 2__: Describe the specific IBM backend you will use, as assigned above.\n",
+    "Please note that there are several valid ways to answer this question, but a generic description of quantum hardware is not one of them.  \n",
+    "For full credit, you must do two things:\n",
+    "1. Provide at least three _specific_ properties of the machine that you will use.  Hint: Qiskit provides ways to obtain such information, so you do not need to search for machine-specific information on other websites.\n",
+    "2. Summarize that information using a few sentences.  For full credit, these need to be complete sentences, preferably organized in a logical manner."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Insert the answer to Question 2 HERE."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit import QuantumCircuit\n",
+    "from qiskit import execute, BasicAer\n",
+    "from qiskit_ibm_provider import IBMProvider\n",
+    "\n",
+    "qr = QuantumRegister(2, 'q_reg')\n",
+    "cr = ClassicalRegister(2, 'c_reg')\n",
+    "qc = QuantumCircuit(qr, cr)\n",
+    "\n",
+    "qc.h(qr[0])\n",
+    "qc.cx(qr[0],qr[1])\n",
+    "\n",
+    "# Must find state vector for wavefunction before you add measurement operators,\n",
+    "# because measurement operators cause statefunction collapse.\n",
+    "state_vector = execute(qc,state_vector_sim).result()\n",
+    "vector = state_vector.get_statevector(qc)\n",
+    "print('\\nSTATEVECTOR: ', vector)\n",
+    "\n",
+    "qc.measure(qr, cr)\n",
+    "\n",
+    "print('\\nQUANTUM CIRCUIT DIAGRAM:')\n",
+    "qc.draw(output=\"mpl\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Output the specified quantum circuit.\n",
+    "print('\\nQUANTUM CIRCUIT DIAGRAM:')\n",
+    "print(qc.draw())\n",
+    "print('\\nQASM CIRCUIT SPECIFICATION:')\n",
+    "for i in qc.qasm():\n",
+    "    print(i,end='')\n",
+    "       \n",
+    "# Execute the quantum circuit and output the results of the execution.\n",
+    "print('\\nACTUAL EXECUTION RESULTS:')\n",
+    "for i in range(0,3):\n",
+    "    \n",
+    "    job_exp = execute(qc, least_busy_device, shots=512)\n",
+    "    result_exp = job_exp.result()\n",
+    "    counts = result_exp.get_counts(qc)\n",
+    "    print('Actual execution distribution %d:'%i, counts)\n",
+    "    \n",
+    "    plt.title(\"Qubit Measurement Histogram: \"+str(i))\n",
+    "    plt.bar(counts.keys(),counts.values())\n",
+    "    plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### 2.1 __Question 3__: Describe the histogram distributions between the ideal simulator and the quantum computer. What could be causing these differences?\n",
+    "Please note that for full credit, your answer needs to be written in logically-ordered, complete sentences. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Insert the answer to Question 3 HERE"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2.2 __Question 4__: Explain how coupling maps shown for your device (see below) impact errors.\n",
+    "Please note that for full credit, your answer needs to be written in logically-ordered, complete sentences. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Insert the answer to Question 4 HERE"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.visualization import plot_gate_map\n",
+    "\n",
+    "plot_gate_map(least_busy_device)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 3. Control Z Gate and Phase Kickback"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Below is a setup of two qubits in superposition $\\frac{| 0\\rangle +  | 1\\rangle}{2}$ and $\\frac{| 0\\rangle -  | 1\\rangle}{2}$, which are known as the $|+\\rangle$ and $|-\\rangle$ states."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.visualization import plot_bloch_multivector"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "qc = QuantumCircuit(2)\n",
+    "qc.h(0)\n",
+    "\n",
+    "qc.x(1)\n",
+    "qc.h(1)\n",
+    "\n",
+    "display(qc.draw())\n",
+    "# See Results:\n",
+    "qc.save_statevector()\n",
+    "qobj = assemble(qc)\n",
+    "final_state = simulator.run(qobj).result().get_statevector()\n",
+    "plot_bloch_multivector(final_state)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Below we apply a controlled phase gate, with phase $\\pi/4$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "qc = QuantumCircuit(2)\n",
+    "\n",
+    "qc.h(0)\n",
+    "\n",
+    "qc.x(1)\n",
+    "qc.h(1)\n",
+    "\n",
+    "qc.cp(np.pi/4, 0, 1)\n",
+    "\n",
+    "\n",
+    "display(qc.draw())\n",
+    "# See Results:\n",
+    "qc.save_statevector()\n",
+    "qobj = assemble(qc)\n",
+    "final_state = simulator.run(qobj).result().get_statevector()\n",
+    "plot_bloch_multivector(final_state)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 3.1 __Question 5__: Note that the phase is shifted for both qubits.  Describe why this is the case.\n",
+    "You may do this in any way that is accurate, complete, logical, and clearly illustrates that you understand what is happening.  For example, you might use a mathematical justification (step-by-step Dirac notation), mathematical formula with text, or some combination of both."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 4. __Question 6__: Create a program that results in state $\\frac{|010\\rangle+|101\\rangle}{\\sqrt{2}}$, and test with visualizations.\n",
+    "Note you may use simulator backends for this problem.  This is an example of a Greenberger-Horne-Zeilinger (GHZ) entanglement state.  You can find out more about GHZ states here: https://en.wikipedia.org/wiki/Greenberger%E2%80%93Horne%E2%80%93Zeilinger_state"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Insert your code in this cell."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 5. Export this Jupyter notebook to html and submit it by emailing to erhenderson@smu.edu, hendersonj@smu.edu, and mitch@smu.edu."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "JMHTACSE8381",
+   "language": "python",
+   "name": "jmhtacse8381"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
